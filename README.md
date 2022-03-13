@@ -11,6 +11,18 @@ provide the common set of functionality that users expect. Input event
 processing includes scaling touch coordinates, generating
 relative pointer events from touchpads, pointer acceleration, etc.
 
+libinput-direct-abs-input
+-------------------------
+
+This fork can flush tablet absolute axis changes (`EV_ABS`) immediately instead of waiting for an `EV_SYN`.
+This means that for a diagonal pen movement with an `X` change, then a `Y` change, then a `SYN`,
+Your pointer will move in a zig-zag pattern instead of diagonally,
+but in turn you get *visibly* reduced input latency, which matters probably literally only if you're playing *osu!*.
+
+The changed behavior is enabled by `touch`ing `/tmp/libinput-direct-abs-input` and bringing a pencil into proximity,
+and disabled by `rm`ing the file and bringing a pencil into proximity.
+I looked at making an option but the options code is obscure and excessive in amount and also I'd need to fork `xf86-input-libinput` as well.
+
 User documentation
 ------------------
 
