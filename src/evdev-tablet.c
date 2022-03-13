@@ -42,6 +42,20 @@ enum notify {
    This value is higher during test suite runs */
 static int FORCED_PROXOUT_TIMEOUT = 50 * 1000; /* µs */
 
+static int DIRECT_ABS_INPUT = 0;
+#include <sys/stat.h>
+#include <stdio.h>
+static void update_direct_abs_input(void)
+{
+	struct stat buffer;
+	int new_direct_abs_input = !stat("/tmp/libinput-direct-abs-input", &buffer);
+	if (new_direct_abs_input != DIRECT_ABS_INPUT) {
+		printf("direct abs input changed to %i\n", new_direct_abs_input);
+		fflush(stdout);
+		DIRECT_ABS_INPUT = new_direct_abs_input;
+	}
+}
+
 #define tablet_set_status(tablet_,s_) (tablet_)->status |= (s_)
 #define tablet_unset_status(tablet_,s_) (tablet_)->status &= ~(s_)
 #define tablet_has_status(tablet_,s_) (!!((tablet_)->status & (s_)))
@@ -1565,6 +1579,8 @@ tablet_send_proximity_in(struct tablet_dispatch *tablet,
 	if (!tablet_has_status(tablet, TABLET_TOOL_ENTERING_PROXIMITY))
 		return false;
 
+	update_direct_abs_input();
+
 	tablet_notify_proximity(&device->base,
 				time,
 				tool,
@@ -2079,9 +2095,6 @@ tablet_process(struct evdev_dispatch *dispatch,
 	struct tablet_dispatch *tablet = tablet_dispatch(dispatch);
 
 	switch (e->type) {
-	case EV_ABS:
-		tablet_process_absolute(tablet, device, e, time);
-		break;
 	case EV_REL:
 		tablet_process_relative(tablet, device, e, time);
 		break;
@@ -2091,6 +2104,9 @@ tablet_process(struct evdev_dispatch *dispatch,
 	case EV_MSC:
 		tablet_process_misc(tablet, device, e, time);
 		break;
+	case EV_ABS:
+		tablet_process_absolute(tablet, device, e, time);
+		if (!DIRECT_ABS_INPUT) break;
 	case EV_SYN:
 		tablet_flush(tablet, device, time);
 		tablet_toggle_touch_device(tablet, device, time);
